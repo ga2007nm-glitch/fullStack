@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import { CartProvider } from './providers/CartProvider.jsx'
 import { routeTable } from './routes.jsx'
 import SiteHeader from './SiteHeader.jsx'
@@ -16,8 +16,6 @@ import Skeleton from '../shared/ui/Skeleton.jsx'
  * cart state.
  */
 export default function App() {
-  const { pathname } = useLocation()
-
   return (
     <ErrorBoundary>
       <CartProvider>
@@ -29,7 +27,15 @@ export default function App() {
 
         <main id="main" className="site-main">
           <Suspense fallback={<PageSkeleton />}>
-            <Routes location={{ pathname }}>
+            {/*
+             * No `location` prop here. `<Routes>` takes its location from the
+             * router context, which `BrowserRouter` (client) and `StaticRouter`
+             * (pre-render, see scripts/prerender.mjs) both provide. Passing a
+             * partial `{ pathname }` object overrides that context with one that
+             * has no `state`/`key`/`search`, so query-string filters and
+             * navigation state silently stop working.
+             */}
+            <Routes>
               {routeTable.map(({ path, element: Element }) => (
                 <Route key={path} path={path} element={<Element />} />
               ))}

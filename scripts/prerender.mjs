@@ -17,6 +17,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { Writable } from 'node:stream'
 import { createServer } from 'vite'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -101,6 +102,55 @@ async function writePage(template, path, markup, head) {
   return outPath.replace(root, '')
 }
 
+/**
+ * Render one element to a complete HTML string using the streaming API.
+ *
+ * `renderToPipeableStream` reports completion through callbacks rather than
+ * returning a value, so this promisifies it:
+ *  - `onAllReady` fires once *every* Suspense boundary has resolved — including
+ *    our `React.lazy` route chunks. Waiting for it (instead of `onShellReady`,
+ *    which fires after the shell only) is what guarantees the page body is in
+ *    the output rather than a fallback.
+ *  - `onError` rejects, so a render failure fails the build loudly instead of
+ *    writing a half-page.
+ *
+ * `onShellReady` is intentionally unused: the pipe must not start until
+ * `onAllReady`, or the response would end before the deferred content arrives.
+ */
+function renderPage(element) {
+  return new Promise((resolve, reject) => {
+    let shellReady = false
+    const chunks = []
+
+    const stream = renderToPipeableStream(element, {
+      onAllReady() {
+        shellReady = true
+        stream.pipe(
+          new Writable({
+            write(chunk, _encoding, callback) {
+              chunks.push(chunk)
+              callback()
+            },
+            final(callback) {
+              resolve(Buffer.concat(chunks).toString('utf8'))
+              callback()
+            }
+          })
+        )
+      },
+      onError(error) {
+        if (!shellReady) reject(error)
+        else console.error('Render error after shell:', error)
+      }
+    })
+
+    // Safety valve: a stuck boundary should fail the build, not hang it.
+    setTimeout(() => {
+      if (!shellReady) reject(new Error('Render timed out after 20s'))
+    }, 20_000).unref()
+  })
+}
+
 async function main() {
   const started = Date.now()
 
@@ -137,10 +187,30 @@ async function main() {
      * produces is identical.
      */
     const require = createRequire(import.meta.url)
-    const { renderToString } = require('react-dom/server')
+    /*
+     * `renderToPipeableStream`, not `renderToString`.
+     *
+     * React 18's `renderToString` does not support Suspense: on hitting a pending
+     * boundary it emits a `<!--$!-->` template with "The server did not finish
+     * this Suspense boundary" and discards the real tree. Since every route is
+     * `React.lazy`, that produced an empty shell for every page.
+     *
+     * `renderToPipeableStream` supports Suspense, so it waits for the lazy chunk
+     * and emits the resolved markup. React's own error message points here.
+     */
+    const { renderToPipeableStream } = require('react-dom/server')
     // Also CJS — required, not ssrLoadModule'd, for the same reason as above.
     const React = require('react')
-    const { StaticRouter } = await vite.ssrLoadModule('react-router-dom/server.mjs')
+
+    /*
+     * `react-router-dom@6` ships `server.mjs` but declares no `exports` map, so
+     * Vite cannot resolve the bare specifier and the load fails with
+     * "Does the file exist?". Resolving to an absolute path skips the bare-import
+     * resolver entirely.
+     */
+    const { StaticRouter } = await vite.ssrLoadModule(
+      join(root, 'node_modules', 'react-router-dom', 'server.mjs')
+    )
 
     const { routeTable, enumerablePaths } = await vite.ssrLoadModule('/src/app/routes.jsx')
     const { products } = await vite.ssrLoadModule('/src/features/catalog/data/products.js')
@@ -149,31 +219,6 @@ async function main() {
     const paths = await enumerablePaths()
     const written = []
 
-    /*
-     * Pre-warm every lazy route chunk before rendering anything.
-     *
-     * Routes are `React.lazy`. React 18's `renderToString` is synchronous: it
-     * does not wait for a pending lazy promise, so a cold render emits the
-     * Suspense fallback (our skeleton) and throws the real page away. There is
-     * no way to "retry" that render — the suspended tree is gone.
-     *
-     * Instead we force each dynamic import to resolve up front. Once the module
-     * is in Vite's cache, `React.lazy` initialises synchronously on first render
-     * and `renderToString` produces the real markup on the very first pass.
-     *
-     * The specifiers below mirror `src/app/routes.jsx`. A new route that is not
-     * added here is caught by the `<h1>` guard further down rather than silently
-     * shipping an empty page.
-     */
-    const lazyRouteModules = [
-      '/src/features/catalog/pages/HomePage.jsx',
-      '/src/features/catalog/pages/CatalogPage.jsx',
-      '/src/features/catalog/pages/ProductPage.jsx',
-      '/src/features/cart/pages/CartPage.jsx'
-    ]
-
-    await Promise.all(lazyRouteModules.map((id) => vite.ssrLoadModule(id)))
-
     for (const path of paths) {
       const element = React.createElement(
         StaticRouter,
@@ -181,19 +226,25 @@ async function main() {
         React.createElement(App)
       )
 
-      const markup = renderToString(element)
+      const markup = await renderPage(element)
 
       /*
-       * Guard against silently shipping an empty shell. The skeleton fallback
-       * contains no <h1>, so its absence means a lazy boundary was still pending
-       * (or a page genuinely renders no heading). `/cart` is exempt because an
-       * empty cart legitimately renders an <h2> with no <h1>.
+       * Guard against silently shipping a fallback shell. If a Suspense boundary
+       * did not resolve, React leaves a `<!--$!-->` marker (and a data-msg
+       * template) in the output — catch it here rather than publishing a page
+       * with no content. The `<h1>` check covers the same failure from the
+       * opposite direction: every real page renders a heading.
        */
-      if (!markup.includes('<h1') && path !== '/cart') {
+      if (markup.includes('<!--$!-->')) {
         throw new Error(
-          `${path} pre-rendered without an <h1>. A React.lazy route was probably ` +
-            'still pending — add its module to `lazyRouteModules` above.'
+          `${path} pre-rendered with an unresolved Suspense boundary. ` +
+            'Check that the route component and its children can all render on the server.'
         )
+      }
+
+      // `/cart` is exempt: an empty cart legitimately renders an <h2>, no <h1>.
+      if (!markup.includes('<h1') && path !== '/cart') {
+        throw new Error(`${path} pre-rendered without an <h1> — the page body is missing.`)
       }
 
       const product = products.find((item) => `/product/${item.slug}` === path)

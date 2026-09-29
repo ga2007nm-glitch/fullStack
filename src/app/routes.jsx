@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import { NotFoundPage } from './App.jsx'
+import NotFoundPage from './NotFoundPage.jsx'
 
 /*
  * Single source of truth for the app's routes.
