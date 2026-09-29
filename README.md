@@ -83,6 +83,7 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # bundle + pre-render → dist/
 npm run preview    # serve the real production output on :4173
+npm run qa         # end-to-end browser suite against a served build
 ```
 
 ## Deployment
@@ -97,7 +98,53 @@ npm run deploy     # Vercel; or connect the repo in Netlify/Render UI
 
 ## Verification performed
 
-- `npm run build` completes with no errors.
-- `dist/` contains pre-rendered HTML for `/`, `/shop`, `/product/:slug`, `/cart`.
-- Production output loaded in a headless browser: no console errors, no failed
-  network requests, product markup present in the DOM (see `DEPLOYMENT.md`).
+`npm run build` completes cleanly and pre-renders all 15 routes:
+
+```
+✓ /                                   → dist/index.html
+✓ /shop                               → dist/shop/index.html
+✓ /cart                               → dist/cart/index.html
+✓ /product/aperture-over-ear-headphones → dist/product/aperture-over-ear-headphones/index.html
+  … 11 more product pages
+Pre-rendered 15 routes in 647 ms
+```
+
+The production output was then driven in a headless browser (`scripts/qa.mjs`)
+across the real user flows. **0 console errors, 0 failed requests.**
+
+| Flow | Result |
+| --- | --- |
+| `/shop` | 12 product cards, heading “Shop all products” |
+| `?category=audio` | 3 products, all audio |
+| `?sort=price-asc` | `[45,69,99,129,149,159,179,189,189,219,279,349]` — ascending |
+| `?q=lamp` | Halo Desk Lamp, Beacon Floor Lamp, Lumen Task Light |
+| Product page | `<title>`, `<h1>`, price, 4 spec rows, JSON-LD `Product`, related items |
+| Add to cart | header badge `1`; still `1` after a full reload (localStorage) |
+| Cart totals | $189.00 subtotal → $204.12 total (shipping + tax) |
+| Quantity stepper | $204.12 → $408.24 |
+| Unknown URL | “Page not found” (catch-all route, not a host 404) |
+
+Run it yourself against any deployment:
+
+```bash
+npm run build
+npx vite preview --port 4180
+npm run qa                              # localhost:4180 by default
+QA_ORIGIN=https://your-url npm run qa   # or point it at production
+```
+
+## Notes on the build pipeline
+
+Two non-obvious things the pre-renderer does, both found by building it:
+
+- **`renderToPipeableStream`, not `renderToString`.** React 18's `renderToString`
+  does not support Suspense. Because every route is `React.lazy`, it emitted a
+  `<!--$!-->` placeholder and discarded the real tree — every page shipped as an
+  empty shell. The streaming API waits for the lazy chunk.
+- **`App.jsx` and `routes.jsx` must not import each other.** A cycle left
+  `routeTable` as `undefined` during module evaluation, so every `<Route>`
+  received an undefined element. `NotFoundPage` therefore lives in its own file.
+
+Both failure modes are now caught at build time rather than in production: the
+pre-renderer throws if a route produces no `<h1>` or leaves an unresolved
+Suspense marker.

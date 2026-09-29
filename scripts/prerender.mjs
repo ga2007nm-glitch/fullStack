@@ -117,7 +117,7 @@ async function writePage(template, path, markup, head) {
  * `onShellReady` is intentionally unused: the pipe must not start until
  * `onAllReady`, or the response would end before the deferred content arrives.
  */
-function renderPage(element) {
+function renderPage(renderToPipeableStream, element) {
   return new Promise((resolve, reject) => {
     let shellReady = false
     const chunks = []
@@ -181,10 +181,6 @@ async function main() {
      * `createRequire`. This is the correct tool: the module genuinely *is*
      * CommonJS and Node can execute it natively. Vite's job here is only to
      * transform our JSX source.
-     *
-     * `react-dom/server.browser` resolves to `server.node.js` under Node's
-     * `default` condition, which is fine and marginally faster — the markup it
-     * produces is identical.
      */
     const require = createRequire(import.meta.url)
     /*
@@ -226,7 +222,7 @@ async function main() {
         React.createElement(App)
       )
 
-      const markup = await renderPage(element)
+      const markup = await renderPage(renderToPipeableStream, element)
 
       /*
        * Guard against silently shipping a fallback shell. If a Suspense boundary

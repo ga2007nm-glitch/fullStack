@@ -55,7 +55,9 @@ export default function OptimizedImage({
       width={width}
       height={height}
       loading={priority ? 'eager' : 'lazy'}
-      fetchPriority={priority ? 'high' : 'auto'}
+      // Lowercase: React 18 passes unknown lowercase attributes straight through
+      // to the DOM, but warns on camelCase ones it does not recognise as props.
+      fetchpriority={priority ? 'high' : undefined}
       decoding={priority ? 'sync' : 'async'}
       draggable="false"
       {...rest}
