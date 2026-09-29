@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0f172a" />
+
+    <title>Lumen — Curated Modern Products</title>
+    <meta
+      name="description"
+      content="Lumen is a curated catalog of considered objects — audio, lighting, workspace and everyday carry, chosen for how they feel to live with."
+    />
+    <link rel="canonical" href="https://lumen-catalog.vercel.app/" />
+
+    <!-- Open Graph / social -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Lumen — Curated Modern Products" />
+    <meta
+      property="og:description"
+      content="A curated catalog of considered objects for the modern home and workspace."
+    />
+    <meta property="og:image" content="/og-image.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Inline SVG favicon: zero extra network request -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f172a'/%3E%3Cpath d='M16 6l2.6 7.4L26 16l-7.4 2.6L16 26l-2.6-7.4L6 16l7.4-2.6z' fill='%2338bdf8'/%3E%3C/svg%3E"
+    />
+
+    <!--
+      Preconnect to the image CDN so the TLS handshake overlaps with
+      HTML parsing instead of starting after the first image is requested.
+    -->
+    <link rel="preconnect" href="https://images.unsplash.com" crossorigin />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
+
+    <!-- LCP image: fetch it in parallel with the stylesheet, at high priority -->
+    <link
+      rel="preload"
+      as="image"
+      fetchpriority="high"
+      href="https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=900&q=70"
+    />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Store",
+        "name": "Lumen",
+        "description": "A curated catalog of considered objects for the modern home and workspace.",
+        "url": "https://lumen-catalog.vercel.app/"
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "name": "lumen-catalog",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Lumen — a production-grade React e-commerce product catalog. Client-side routing, modular architecture, optimized assets and static pre-rendering.",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && node scripts/prerender.mjs",
+    "build:client": "vite build",
+    "preview": "vite preview --port 4173",
+    "prerender": "node scripts/prerender.mjs",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^5.4.8"
+  }
+}

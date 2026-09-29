@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Static sitemap. Regenerate with `node scripts/generate-sitemap.mjs` after
+  changing the catalog, or swap the domain for your deployed URL.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://lumen-catalog.vercel.app/</loc><priority>1.0</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/shop</loc><priority>0.9</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/shop?category=audio</loc><priority>0.7</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/shop?category=lighting</loc><priority>0.7</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/shop?category=workspace</loc><priority>0.7</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/shop?category=carry</loc><priority>0.7</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/aperture-over-ear-headphones</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/halo-desk-lamp</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/meridian-mechanical-keyboard</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/porter-leather-sleeve</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/orbit-portable-speaker</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/strata-monitor-stand</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/beacon-floor-lamp</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/field-daypack-22l</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/studio-usb-microphone</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/contour-desk-mat</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/lumen-task-light</loc><priority>0.8</priority></url>
+  <url><loc>https://lumen-catalog.vercel.app/product/trek-insulated-bottle</loc><priority>0.8</priority></url>
+</urlset>
